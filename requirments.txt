@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+dotenv
+uuid
+pydantic[email]
+pwdlib
+psycopg2-binary
+jose
+python-jose
