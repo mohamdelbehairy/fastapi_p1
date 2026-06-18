@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select, func
+from math import ceil
 
 from app.core.security import get_current_user
 from app.models.user import User
@@ -16,10 +17,33 @@ router = APIRouter(
 async def get_all_users(
         current_user: User = Depends(get_current_user),
         session: Session = Depends(get_session),
+        page: int = Query(default=1, ge=1),
+        limit: int = Query(default=20, ge=1, le=100),
 ):
-    all_users = session.exec(select(User).where(User.id != current_user.id)).all()
+    offset = (page - 1) * limit
+    
+    total = session.exec(
+        select(func.count())
+        .select_from(User)
+        .where(User.id != current_user.id)
+    ).one()
 
-    return [user.model_dump(exclude={"password"}) for user in all_users]
+    all_users = session.exec(
+        select(User)
+        .where(User.id != current_user.id)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    return {
+        "page": page,
+        "limit": limit,
+        "total_users": total,
+        "data": [
+            user.model_dump(exclude={"password"})
+            for user in all_users
+        ]
+    }
 
 @router.get("/me")
 async def get_user_data(
